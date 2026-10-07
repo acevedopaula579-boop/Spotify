@@ -1,0 +1,21 @@
+{
+  "nombre_modelo": "regresion_popularidad",
+  "version": "0.0.1-placeholder",
+  "archivo_modelo": "regresion_popularidad.pkl",
+  "columnas": [
+    "duration_ms",
+    "explicit",
+    "danceability",
+    "energy",
+    "key",
+    "loudness",
+    "mode",
+    "speechiness",
+    "acousticness",
+    "instrumentalness",
+    "liveness",
+    "valence",
+    "tempo",
+    "time_signature"
+  ]
+}
