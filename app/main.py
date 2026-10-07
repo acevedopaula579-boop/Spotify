@@ -145,3 +145,17 @@ def predecir(entrada: Entrada):
 @app.get("/metricas/regresion")
 def metricas_regresion():
     return json.loads((BASE / "metricas_regresion.json").read_text(encoding="utf-8"))
+
+@app.get("/predicciones/ultimas")
+def ultimas_predicciones(limite: int = 10):
+    if engine is None:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    from sqlalchemy import text
+
+    with engine.begin() as con:
+        filas = con.execute(
+            text("SELECT id, modelo, version, entrada, indice_popularidad, creado_en "
+                 "FROM predicciones ORDER BY id DESC LIMIT :n"),
+            {"n": min(max(limite, 1), 100)},
+        ).mappings().all()
+    return [dict(f) for f in filas]
