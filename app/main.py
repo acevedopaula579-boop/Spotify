@@ -6,7 +6,7 @@ from typing import Dict
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 BASE = Path(__file__).parent / "modelos"
 
@@ -19,7 +19,7 @@ config = json.loads((BASE / "config.json").read_text(encoding="utf-8"))
 COLUMNAS = config["columnas"]
 modelo = joblib.load(BASE / config["archivo_modelo"])
 
-# base de datos 
+# base de datos
 engine = None
 _url = os.getenv("DATABASE_URL")
 if _url:
@@ -62,9 +62,37 @@ def guardar_prediccion(entrada: dict, valor: float) -> None:
         print("Aviso: no se pudo guardar la prediccion:", e)
 
 
+RANGOS = {
+    "duration_ms": (1, 3_600_000),
+    "explicit": (0, 1),
+    "danceability": (0, 1),
+    "energy": (0, 1),
+    "key": (-1, 11),
+    "loudness": (-60, 5),
+    "mode": (0, 1),
+    "speechiness": (0, 1),
+    "acousticness": (0, 1),
+    "instrumentalness": (0, 1),
+    "liveness": (0, 1),
+    "valence": (0, 1),
+    "tempo": (1, 300),
+    "time_signature": (0, 7),
+}
+
 
 class Entrada(BaseModel):
     features: Dict[str, float]
+
+    @field_validator("features")
+    @classmethod
+    def validar_rangos(cls, v):
+        fuera = []
+        for nombre, (minimo, maximo) in RANGOS.items():
+            if nombre in v and not (minimo <= v[nombre] <= maximo):
+                fuera.append(f"{nombre}={v[nombre]} (permitido {minimo} a {maximo})")
+        if fuera:
+            raise ValueError("Valores fuera de rango: " + "; ".join(fuera))
+        return v
 
     model_config = {
         "json_schema_extra": {
