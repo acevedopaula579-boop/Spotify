@@ -1,14 +1,21 @@
 import json
 import os
+import sys
 from pathlib import Path
-from typing import Dict
 
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
-BASE = Path(__file__).parent / "modelos"
+RAIZ = Path(__file__).resolve().parent.parent
+BASE = RAIZ / "app" / "modelos"
+REGRESION = RAIZ / "regresion"
+RUTA_DATOS = REGRESION / "data" / "canciones.csv"
+
+# El .pkl guarda referencias a src.variables.derivadas: `src` vive dentro de regresion/.
+if str(REGRESION) not in sys.path:
+    sys.path.insert(0, str(REGRESION))
 
 app = FastAPI(
     title="API de prediccion de popularidad de canciones",
@@ -16,8 +23,52 @@ app = FastAPI(
 )
 
 config = json.loads((BASE / "config.json").read_text(encoding="utf-8"))
-COLUMNAS = config["columnas"]
-modelo = joblib.load(BASE / config["archivo_modelo"])
+
+# Carga una sola vez, al arrancar el proceso (no en cada request).
+artefacto = joblib.load(BASE / config["archivo_modelo"])
+modelo = artefacto["pipeline"]
+COLUMNAS: list[str] = list(artefacto["columnas_entrada"])
+FICHA: dict = artefacto["ficha"]
+
+MARGEN_RANGO = 0.10  # 10% del rango observado, para no rechazar valores reales
+
+
+def rangos_desde_datos(columnas: list[str]) -> dict[str, tuple[float, float]]:
+    """Minimo y maximo de cada columna numerica en canciones.csv, con margen."""
+    if not RUTA_DATOS.exists():
+        print(f"Aviso: no existe {RUTA_DATOS}; no se validan rangos.")
+        return {}
+    datos = pd.read_csv(RUTA_DATOS)
+    rangos: dict[str, tuple[float, float]] = {}
+    for columna in columnas:
+        if columna not in datos.columns:
+            continue
+        serie = pd.to_numeric(datos[columna], errors="coerce").dropna()
+        if serie.empty:
+            continue
+        minimo, maximo = float(serie.min()), float(serie.max())
+        margen = (maximo - minimo) * MARGEN_RANGO
+        rangos[columna] = (minimo - margen, maximo + margen)
+    return rangos
+
+
+def categorias_de_genero(pipeline) -> list[str]:
+    """Categorias que el OneHotEncoder del pipeline aprendio para `genero`."""
+    pendientes = [pipeline]
+    while pendientes:
+        objeto = pendientes.pop()
+        if hasattr(objeto, "categories_") and hasattr(objeto, "drop_idx_"):
+            return [str(c) for c in objeto.categories_[0]]
+        for atributo in ("steps", "transformers_"):
+            for elemento in getattr(objeto, atributo, None) or []:
+                pendientes.append(elemento[1])
+    return []
+
+
+RANGOS = rangos_desde_datos([c for c in COLUMNAS if c != "genero"])
+GENEROS = categorias_de_genero(modelo)
+if not GENEROS:
+    print("Aviso: el pipeline no expone categorias de `genero`; no se valida ese campo.")
 
 # base de datos
 engine = None
@@ -55,58 +106,71 @@ def guardar_prediccion(entrada: dict, valor: float) -> None:
             con.execute(
                 text("INSERT INTO predicciones (modelo, version, entrada, indice_popularidad) "
                      "VALUES (:m, :v, CAST(:e AS JSONB), :p)"),
-                {"m": config["nombre_modelo"], "v": config["version"],
+                {"m": FICHA["nombre"], "v": config["version"],
                  "e": json.dumps(entrada), "p": valor},
             )
     except Exception as e:
         print("Aviso: no se pudo guardar la prediccion:", e)
 
 
-RANGOS = {
-    "duration_ms": (1, 3_600_000),
-    "explicit": (0, 1),
-    "danceability": (0, 1),
-    "energy": (0, 1),
-    "key": (-1, 11),
-    "loudness": (-60, 5),
-    "mode": (0, 1),
-    "speechiness": (0, 1),
-    "acousticness": (0, 1),
-    "instrumentalness": (0, 1),
-    "liveness": (0, 1),
-    "valence": (0, 1),
-    "tempo": (1, 300),
-    "time_signature": (0, 7),
-}
-
-
 class Entrada(BaseModel):
-    features: Dict[str, float]
-
-    @field_validator("features")
-    @classmethod
-    def validar_rangos(cls, v):
-        fuera = []
-        for nombre, (minimo, maximo) in RANGOS.items():
-            if nombre in v and not (minimo <= v[nombre] <= maximo):
-                fuera.append(f"{nombre}={v[nombre]} (permitido {minimo} a {maximo})")
-        if fuera:
-            raise ValueError("Valores fuera de rango: " + "; ".join(fuera))
-        return v
+    """Caracteristicas conocidas antes del lanzamiento."""
 
     model_config = {
+        "extra": "forbid",
         "json_schema_extra": {
             "example": {
-                "features": {
-                    "duration_ms": 210000, "explicit": 0, "danceability": 0.7,
-                    "energy": 0.8, "key": 5, "loudness": -5.0, "mode": 1,
-                    "speechiness": 0.05, "acousticness": 0.1,
-                    "instrumentalness": 0.0, "liveness": 0.1, "valence": 0.6,
-                    "tempo": 120.0, "time_signature": 4,
-                }
+                "bailabilidad": 0.72,
+                "energia": 0.65,
+                "valencia": 0.55,
+                "acustica": 0.12,
+                "tempo": 118.0,
+                "duracion_min": 3.4,
+                "volumen_db": -6.5,
+                "anio": 2026,
+                "colaboracion": 1,
+                "genero": "urbano",
             }
-        }
+        },
     }
+
+    bailabilidad: float
+    energia: float
+    valencia: float
+    acustica: float
+    tempo: float
+    duracion_min: float
+    volumen_db: float
+    anio: float
+    colaboracion: float
+    genero: str
+
+    @field_validator("genero")
+    @classmethod
+    def genero_conocido(cls, valor: str) -> str:
+        if GENEROS and valor not in GENEROS:
+            raise ValueError(f"genero desconocido: {valor!r}; use uno de {GENEROS}")
+        return valor
+
+    @model_validator(mode="after")
+    def dentro_de_rangos(self):
+        fuera = []
+        for nombre, (minimo, maximo) in RANGOS.items():
+            valor = getattr(self, nombre, None)
+            if isinstance(valor, (int, float)) and not minimo <= valor <= maximo:
+                fuera.append(f"{nombre}={valor:g} (permitido {minimo:g} a {maximo:g})")
+        if fuera:
+            raise ValueError("Valores fuera de rango: " + "; ".join(fuera))
+        return self
+
+
+_faltan = set(COLUMNAS) - set(Entrada.model_fields)
+_sobran = set(Entrada.model_fields) - set(COLUMNAS)
+if _faltan or _sobran:
+    raise RuntimeError(
+        f"El esquema no coincide con columnas_entrada del .pkl: "
+        f"faltan={sorted(_faltan)} sobran={sorted(_sobran)}"
+    )
 
 
 # endpoints
@@ -123,22 +187,19 @@ def health():
 @app.get("/modelo/info")
 def info():
     return {
-        "nombre": config["nombre_modelo"],
+        "nombre": FICHA["nombre"],
         "version": config["version"],
         "columnas": COLUMNAS,
+        "generos": GENEROS,
         "tipo": type(modelo).__name__,
     }
 
 
 @app.post("/predict/popularidad")
 def predecir(entrada: Entrada):
-    faltan = [c for c in COLUMNAS if c not in entrada.features]
-    if faltan:
-        raise HTTPException(status_code=422, detail=f"Faltan columnas: {faltan}")
-
-    df = pd.DataFrame([[entrada.features[c] for c in COLUMNAS]], columns=COLUMNAS)
-    valor = float(modelo.predict(df)[0])
-    guardar_prediccion(entrada.features, valor)
+    fila = pd.DataFrame([entrada.model_dump()], columns=COLUMNAS)
+    valor = float(modelo.predict(fila)[0])
+    guardar_prediccion(entrada.model_dump(), valor)
     return {"indice_popularidad": round(valor, 2), "version_modelo": config["version"]}
 
 
