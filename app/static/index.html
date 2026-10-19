@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Predicción de popularidad</title>
+<style>
+  :root {
+    --bg: #0a0b0d;
+    --card: #15181d;
+    --card-2: #1b1f26;
+    --border: #2b313b;
+    --text: #e9ecf1;
+    --muted: #a6afbd;
+    --accent: #00e676;
+    --accent-ink: #04170d;
+    --error: #ff7a7a;
+    --ok: #67e8f9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px 64px;
+  }
+  main { width: 100%; max-width: 760px; }
+  h1 {
+    font-size: 1.5rem;
+    margin: 0 0 4px;
+    letter-spacing: .2px;
+  }
+  .sub { color: var(--muted); margin: 0 0 24px; font-size: .95rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  h2 {
+    font-size: 1rem;
+    margin: 0 0 16px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--accent);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+  }
+  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+  input, select {
+    width: 100%;
+    background: var(--card-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font: inherit;
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  .actions { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  button {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 0;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  button[disabled] { opacity: .6; cursor: progress; }
+  .link {
+    color: var(--ok);
+    font-size: .9rem;
+  }
+  .link:hover { text-decoration-thickness: 2px; }
+  .resultado {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    background: var(--card-2);
+    padding: 16px 20px;
+  }
+  .resultado .valor {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .resultado .meta { color: var(--muted); font-size: .9rem; }
+  .estado { margin-top: 12px; font-size: .95rem; }
+  .estado.error { color: var(--error); }
+  .estado.exito { color: var(--text); }
+  .estado ul { margin: 6px 0 0; padding-left: 18px; }
+  .pie { color: var(--muted); font-size: .85rem; text-align: center; margin-top: 8px; }
+  @media (prefers-reduced-motion: no-preference) {
+    button { transition: filter .15s ease; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Predicción de popularidad de canciones</h1>
+    <p class="sub">Modelo de regresión · 10 características previas al lanzamiento</p>
+  </header>
+
+  <section class="card" aria-labelledby="titulo-form">
+    <h2 id="titulo-form">Entrada</h2>
+    <form id="form" novalidate>
+      <div class="grid">
+        <div>
+          <label for="bailabilidad">Bailabilidad (0–1)</label>
+          <input id="bailabilidad" name="bailabilidad" type="number" step="0.01" min="0" max="1" value="0.72" required>
+        </div>
+        <div>
+          <label for="energia">Energía (0–1)</label>
+          <input id="energia" name="energia" type="number" step="0.01" min="0" max="1" value="0.65" required>
+        </div>
+        <div>
+          <label for="valencia">Valencia (0–1)</label>
+          <input id="valencia" name="valencia" type="number" step="0.01" min="0" max="1" value="0.55" required>
+        </div>
+        <div>
+          <label for="acustica">Acústica (0–1)</label>
+          <input id="acustica" name="acustica" type="number" step="0.01" min="0" max="1" value="0.12" required>
+        </div>
+        <div>
+          <label for="tempo">Tempo (BPM)</label>
+          <input id="tempo" name="tempo" type="number" step="0.1" min="40" max="260" value="118" required>
+        </div>
+        <div>
+          <label for="duracion_min">Duración (min)</label>
+          <input id="duracion_min" name="duracion_min" type="number" step="0.1" min="0" max="30" value="3.4" required>
+        </div>
+        <div>
+          <label for="volumen_db">Volumen (dB)</label>
+          <input id="volumen_db" name="volumen_db" type="number" step="0.1" min="-60" max="5" value="-6.5" required>
+        </div>
+        <div>
+          <label for="anio">Año de lanzamiento</label>
+          <input id="anio" name="anio" type="number" step="1" min="1900" max="2100" value="2026" required>
+        </div>
+        <div>
+          <label for="colaboracion">Colaboración</label>
+          <select id="colaboracion" name="colaboracion">
+            <option value="1" selected>Sí (1)</option>
+            <option value="0">No (0)</option>
+          </select>
+        </div>
+        <div>
+          <label for="genero">Género</label>
+          <select id="genero" name="genero">
+            <option value="urbano" selected>urbano</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="submit" id="btn">Predecir</button>
+        <a class="link" href="/modelo/info" target="_blank" rel="noopener">/modelo/info</a>
+        <a class="link" href="/metricas/regresion" target="_blank" rel="noopener">/metricas/regresion</a>
+        <a class="link" href="/docs" target="_blank" rel="noopener">/docs</a>
+      </div>
+    </form>
+  </section>
+
+  <section class="card" aria-live="polite" aria-labelledby="titulo-res">
+    <h2 id="titulo-res">Resultado</h2>
+    <div id="resultado" class="resultado">
+      <div class="valor" id="valor">—</div>
+      <div class="meta" id="meta">Completa el formulario y pulsa «Predecir».</div>
+    </div>
+    <div id="estado" class="estado"></div>
+  </section>
+
+  <p class="pie">Servicio FastAPI · el índice de popularidad se predice con el modelo registrado en el servidor.</p>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const form = $("form");
+  const btn = $("btn");
+  const estado = $("estado");
+
+  async function cargarInfo() {
+    try {
+      const r = await fetch("/modelo/info");
+      if (!r.ok) return;
+      const info = await r.json();
+      if (Array.isArray(info.generos) && info.generos.length) {
+        const sel = $("genero");
+        const actual = sel.value;
+        sel.innerHTML = "";
+        for (const g of info.generos) {
+          const o = document.createElement("option");
+          o.value = g;
+          o.textContent = g;
+          sel.appendChild(o);
+        }
+        if (info.generos.includes(actual)) sel.value = actual;
+      }
+      $("meta").textContent = "Modelo: " + info.nombre + " · versión " + info.version;
+    } catch (_) { /* el servidor sigue usable con los valores por defecto */ }
+  }
+
+  function mostrarError(mensajes) {
+    estado.className = "estado error";
+    estado.textContent = "No se pudo predecir:";
+    const ul = document.createElement("ul");
+    for (const m of mensajes) {
+      const li = document.createElement("li");
+      li.textContent = m;
+      ul.appendChild(li);
+    }
+    estado.appendChild(ul);
+  }
+
+  function detalleValidacion(err) {
+    if (!err || !Array.isArray(err.detail)) return [JSON.stringify(err)];
+    return err.detail.map((d) => {
+      const campo = Array.isArray(d.loc) ? d.loc[d.loc.length - 1] : "entrada";
+      return campo + ": " + (d.msg || "valor inválido");
+    });
+  }
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    estado.className = "estado";
+    estado.textContent = "";
+    btn.disabled = true;
+    $("valor").textContent = "…";
+    $("meta").textContent = "Calculando…";
+
+    const payload = {};
+    for (const el of form.elements) {
+      if (!el.name || el.tagName === "BUTTON") continue;
+      payload[el.name] = el.name === "genero" ? el.value : Number(el.value);
+    }
+
+    try {
+      const r = await fetch("/predict/popularidad", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        $("valor").textContent = "—";
+        $("meta").textContent = "Entrada rechazada.";
+        mostrarError(detalleValidacion(data));
+        return;
+      }
+      $("valor").textContent = data.indice_popularidad.toFixed(2);
+      $("meta").textContent = "Índice de popularidad estimado (modelo v" + data.version_modelo + ")";
+      estado.className = "estado exito";
+      estado.textContent = "Predicción registrada con los 10 campos enviados.";
+    } catch (e) {
+      $("valor").textContent = "—";
+      $("meta").textContent = "Sin respuesta del servidor.";
+      mostrarError([e.message || String(e)]);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  cargarInfo();
+</script>
+</body>
+</html>

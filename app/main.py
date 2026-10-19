@@ -6,12 +6,14 @@ from pathlib import Path
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 RAIZ = Path(__file__).resolve().parent.parent
 BASE = RAIZ / "app" / "modelos"
 REGRESION = RAIZ / "regresion"
 RUTA_DATOS = REGRESION / "data" / "canciones.csv"
+RUTA_UI = RAIZ / "app" / "static" / "index.html"
 
 # El .pkl guarda referencias a src.variables.derivadas: `src` vive dentro de regresion/.
 if str(REGRESION) not in sys.path:
@@ -176,7 +178,14 @@ if _faltan or _sobran:
 # endpoints
 @app.get("/")
 def raiz():
-    return {"servicio": "popularidad-canciones", "docs": "/docs", "estado": "ok"}
+    return {"servicio": "popularidad-canciones", "docs": "/docs", "ui": "/ui", "estado": "ok"}
+
+
+@app.get("/ui", response_class=HTMLResponse)
+def ui():
+    if not RUTA_UI.exists():
+        raise HTTPException(status_code=404, detail="UI no disponible")
+    return HTMLResponse(RUTA_UI.read_text(encoding="utf-8"))
 
 
 @app.get("/health")
