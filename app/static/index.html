@@ -14,8 +14,13 @@
     --muted: #a6afbd;
     --accent: #00e676;
     --accent-ink: #04170d;
-    --error: #ff7a7a;
     --ok: #67e8f9;
+    --good: #00e676;
+    --good-bg: #06301c;
+    --warn: #ffb020;
+    --warn-bg: #3a2a06;
+    --bad: #ff7a7a;
+    --bad-bg: #3a1414;
   }
   * { box-sizing: border-box; }
   body {
@@ -28,13 +33,9 @@
     justify-content: center;
     padding: 32px 16px 64px;
   }
-  main { width: 100%; max-width: 760px; }
-  h1 {
-    font-size: 1.5rem;
-    margin: 0 0 4px;
-    letter-spacing: .2px;
-  }
-  .sub { color: var(--muted); margin: 0 0 24px; font-size: .95rem; }
+  main { width: 100%; max-width: 780px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: .95rem; }
   .card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -64,12 +65,12 @@
     padding: 10px 12px;
     font: inherit;
   }
+  input:focus, select:focus { border-color: var(--accent); }
   input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
-  input:focus, select:focus { border-color: var(--accent); }
-  .actions { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .acciones { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
   button {
     background: var(--accent);
     color: var(--accent-ink);
@@ -80,33 +81,83 @@
     font-weight: 600;
     cursor: pointer;
   }
+  button.secundario {
+    background: var(--card-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-weight: 500;
+  }
   button:hover { filter: brightness(1.08); }
   button[disabled] { opacity: .6; cursor: progress; }
-  .link {
-    color: var(--ok);
-    font-size: .9rem;
-  }
+  .link { color: var(--ok); font-size: .9rem; }
   .link:hover { text-decoration-thickness: 2px; }
-  .resultado {
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--accent);
-    border-radius: 10px;
+  .badge {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 4px 14px;
+    font-weight: 600;
+    font-size: .9rem;
+    border: 1px solid transparent;
+  }
+  .badge.good { background: var(--good-bg); color: var(--good); border-color: var(--good); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); }
+  .badge.bad  { background: var(--bad-bg);  color: var(--bad);  border-color: var(--bad); }
+  .valor { font-size: 2.6rem; font-weight: 700; line-height: 1.1; }
+  .valor .unidad { font-size: 1.1rem; color: var(--muted); font-weight: 500; }
+  .meta { color: var(--muted); font-size: .9rem; margin-top: 6px; }
+  .fila-resultado { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .corte { color: var(--muted); font-size: .9rem; margin-top: 10px; }
+
+  .barra-cont { position: relative; margin: 18px 0 8px; }
+  .barra {
+    height: 18px;
     background: var(--card-2);
-    padding: 16px 20px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
   }
-  .resultado .valor {
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: var(--accent);
+  .barra .relleno {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, #00b862, var(--good));
+    transition: width .3s ease;
   }
-  .resultado .meta { color: var(--muted); font-size: .9rem; }
+  .marca {
+    position: absolute;
+    top: -6px;
+    bottom: -6px;
+    width: 3px;
+    background: var(--warn);
+    left: 27%;
+  }
+  .marca::after {
+    content: "umbral 27 %";
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: .72rem;
+    color: var(--warn);
+    white-space: nowrap;
+  }
+  .escala { display: flex; justify-content: space-between; color: var(--muted); font-size: .75rem; }
   .estado { margin-top: 12px; font-size: .95rem; }
-  .estado.error { color: var(--error); }
-  .estado.exito { color: var(--text); }
+  .estado.error { color: var(--bad); }
   .estado ul { margin: 6px 0 0; padding-left: 18px; }
+  .explicacion { margin-top: 10px; }
+
+  .pestanas { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .pestanas button[aria-selected="true"] {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .pie { color: var(--muted); font-size: .85rem; text-align: center; margin-top: 8px; }
   @media (prefers-reduced-motion: no-preference) {
-    button { transition: filter .15s ease; }
+    button, .barra .relleno { transition: filter .15s ease, width .3s ease; }
   }
 </style>
 </head>
@@ -114,11 +165,11 @@
 <main>
   <header>
     <h1>Predicción de popularidad de canciones</h1>
-    <p class="sub">Modelo de regresión · 10 características previas al lanzamiento</p>
+    <p class="sub">Mismo formulario, dos resultados: popularidad esperada y probabilidad de hit.</p>
   </header>
 
   <section class="card" aria-labelledby="titulo-form">
-    <h2 id="titulo-form">Entrada</h2>
+    <h2 id="titulo-form">Entrada (10 campos)</h2>
     <form id="form" novalidate>
       <div class="grid">
         <div>
@@ -167,32 +218,64 @@
           </select>
         </div>
       </div>
-      <div class="actions">
-        <button type="submit" id="btn">Predecir</button>
-        <a class="link" href="/modelo/info" target="_blank" rel="noopener">/modelo/info</a>
-        <a class="link" href="/metricas/regresion" target="_blank" rel="noopener">/metricas/regresion</a>
+      <div class="acciones">
+        <button type="button" id="btnPop">Popularidad</button>
+        <button type="button" id="btnHit" class="secundario">Probabilidad de hit</button>
         <a class="link" href="/docs" target="_blank" rel="noopener">/docs</a>
+        <a class="link" href="/modelo/info" target="_blank" rel="noopener">/modelo/info</a>
       </div>
+      <div id="estado" class="estado" role="alert"></div>
     </form>
   </section>
 
-  <section class="card" aria-live="polite" aria-labelledby="titulo-res">
-    <h2 id="titulo-res">Resultado</h2>
-    <div id="resultado" class="resultado">
-      <div class="valor" id="valor">—</div>
-      <div class="meta" id="meta">Completa el formulario y pulsa «Predecir».</div>
+  <section class="card" aria-labelledby="titulo-res">
+    <div class="pestanas" role="tablist">
+      <button role="tab" id="tab-res" aria-selected="true" aria-controls="panel-res" type="button">Resultado</button>
+      <button role="tab" id="tab-ficha" aria-selected="false" aria-controls="panel-ficha" type="button" class="secundario">Ficha técnica</button>
     </div>
-    <div id="estado" class="estado"></div>
+
+    <div id="panel-res" role="tabpanel" aria-labelledby="tab-res">
+      <h2 id="titulo-res">Resultado</h2>
+      <div id="resPop">
+        <div class="fila-resultado">
+          <div class="valor"><span id="valorPop">—</span><span class="unidad"> / 100</span></div>
+          <span id="badgePop" class="badge" hidden></span>
+        </div>
+        <div class="corte" id="cortePop">Corte de buena popularidad: 70.</div>
+        <div class="meta" id="metaPop">Pulsa «Popularidad» con la canción cargada.</div>
+      </div>
+
+      <div id="resHit" hidden>
+        <div class="fila-resultado">
+          <div class="valor"><span id="valorHit">—</span><span class="unidad"> %</span></div>
+          <span id="badgeHit" class="badge" hidden></span>
+        </div>
+        <div class="barra-cont">
+          <div class="barra"><div class="relleno" id="relleno"></div></div>
+          <div class="marca" id="marcaUmbral"></div>
+        </div>
+        <div class="escala"><span>0 %</span><span>100 %</span></div>
+        <div class="explicacion" id="expHit"></div>
+        <div class="meta" id="metaHit">Pulsa «Probabilidad de hit» con la canción cargada.</div>
+      </div>
+    </div>
+
+    <div id="panel-ficha" role="tabpanel" aria-labelledby="tab-ficha" hidden>
+      <h2>Ficha técnica del clasificador</h2>
+      <div id="ficha"><p class="meta">Cargando /modelo/clasificador…</p></div>
+    </div>
   </section>
 
-  <p class="pie">Servicio FastAPI · el índice de popularidad se predice con el modelo registrado en el servidor.</p>
+  <p class="pie">Servicio FastAPI · regresión Ridge (vía /predict/popularidad) y clasificador logístico del sprint 2 (vía /predict/hit).</p>
 </main>
 
 <script>
   const $ = (id) => document.getElementById(id);
   const form = $("form");
-  const btn = $("btn");
   const estado = $("estado");
+  const botones = [$("btnPop"), $("btnHit")];
+  let umbralPop = 70;
+  let ultimo = "pop";
 
   async function cargarInfo() {
     try {
@@ -205,26 +288,16 @@
         sel.innerHTML = "";
         for (const g of info.generos) {
           const o = document.createElement("option");
-          o.value = g;
-          o.textContent = g;
+          o.value = g; o.textContent = g;
           sel.appendChild(o);
         }
         if (info.generos.includes(actual)) sel.value = actual;
       }
-      $("meta").textContent = "Modelo: " + info.nombre + " · versión " + info.version;
-    } catch (_) { /* el servidor sigue usable con los valores por defecto */ }
-  }
-
-  function mostrarError(mensajes) {
-    estado.className = "estado error";
-    estado.textContent = "No se pudo predecir:";
-    const ul = document.createElement("ul");
-    for (const m of mensajes) {
-      const li = document.createElement("li");
-      li.textContent = m;
-      ul.appendChild(li);
-    }
-    estado.appendChild(ul);
+      if (typeof info.umbral_popularidad === "number") {
+        umbralPop = info.umbral_popularidad;
+        $("cortePop").textContent = "Corte de buena popularidad: " + umbralPop + ".";
+      }
+    } catch (_) { /* la UI sigue usable con los valores por defecto */ }
   }
 
   function detalleValidacion(err) {
@@ -235,44 +308,137 @@
     });
   }
 
-  form.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    estado.className = "estado";
-    estado.textContent = "";
-    btn.disabled = true;
-    $("valor").textContent = "…";
-    $("meta").textContent = "Calculando…";
+  function error(msgs) {
+    estado.className = "estado error";
+    estado.textContent = "No se pudo calcular:";
+    const ul = document.createElement("ul");
+    for (const m of msgs) {
+      const li = document.createElement("li");
+      li.textContent = m;
+      ul.appendChild(li);
+    }
+    estado.appendChild(ul);
+  }
 
-    const payload = {};
+  function ok(msg) {
+    estado.className = "estado";
+    estado.textContent = msg || "";
+  }
+
+  function payload() {
+    const p = {};
     for (const el of form.elements) {
       if (!el.name || el.tagName === "BUTTON") continue;
-      payload[el.name] = el.name === "genero" ? el.value : Number(el.value);
+      p[el.name] = el.name === "genero" ? el.value : Number(el.value);
     }
+    return p;
+  }
 
+  function ocupado(sí) { botones.forEach((b) => { b.disabled = sí; }); }
+
+  function mostrar(tipo) {
+    ultimo = tipo;
+    $("resPop").hidden = tipo !== "pop";
+    $("resHit").hidden = tipo !== "hit";
+    $("tab-res").setAttribute("aria-selected", "true");
+    $("tab-ficha").setAttribute("aria-selected", "false");
+    $("panel-res").hidden = false;
+    $("panel-ficha").hidden = true;
+  }
+
+  async function predecir(url, tipo) {
+    ok("");
+    ocupado(true);
+    mostrar(tipo);
     try {
-      const r = await fetch("/predict/popularidad", {
+      const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload()),
       });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        $("valor").textContent = "—";
-        $("meta").textContent = "Entrada rechazada.";
-        mostrarError(detalleValidacion(data));
-        return;
+      if (!r.ok) { error(detalleValidacion(data)); return; }
+      if (tipo === "pop") {
+        const buena = data.nivel === "buena";
+        $("valorPop").textContent = Number(data.indice_popularidad).toFixed(1);
+        const b = $("badgePop");
+        b.hidden = false;
+        b.className = "badge " + (buena ? "good" : "warn");
+        b.textContent = data.lectura;
+        $("cortePop").textContent = "Corte de buena popularidad: " + (data.umbral_popularidad ?? umbralPop) + ".";
+        $("metaPop").textContent = "Índice de popularidad estimado (modelo de regresión v" + data.version_modelo + ").";
+      } else {
+        const pct = Number(data.probabilidad_pct);
+        $("valorHit").textContent = pct.toFixed(1);
+        $("relleno").style.width = Math.max(0, Math.min(100, pct)) + "%";
+        $("marcaUmbral").style.left = (Number(data.umbral) * 100) + "%";
+        const b = $("badgeHit");
+        b.hidden = false;
+        b.className = "badge " + (data.invertir ? "good" : "bad");
+        b.textContent = data.invertir ? "Invertir" : "No invertir";
+        $("expHit").textContent = data.mensaje;
+        $("metaHit").textContent = "Modelo: " + data.modelo + " · v" + data.version_modelo;
       }
-      $("valor").textContent = data.indice_popularidad.toFixed(2);
-      $("meta").textContent = "Índice de popularidad estimado (modelo v" + data.version_modelo + ")";
-      estado.className = "estado exito";
-      estado.textContent = "Predicción registrada con los 10 campos enviados.";
     } catch (e) {
-      $("valor").textContent = "—";
-      $("meta").textContent = "Sin respuesta del servidor.";
-      mostrarError([e.message || String(e)]);
+      error([e.message || String(e)]);
     } finally {
-      btn.disabled = false;
+      ocupado(false);
     }
+  }
+
+  async function cargarFicha() {
+    const cont = $("ficha");
+    try {
+      const r = await fetch("/modelo/clasificador");
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const f = await r.json();
+      const m = f.metricas || {};
+      const mc = m.matriz_confusion || {};
+      const num = (v) => (v === null || v === undefined ? "—" : v);
+      cont.innerHTML = "";
+      const t = document.createElement("table");
+      const filas = [
+        ["Modelo", f.nombre],
+        ["Tarea", f.tarea],
+        ["Objetivo", f.objetivo],
+        ["Umbral de decisión", num(f.umbral)],
+        ["ROC AUC", num(m.roc_auc)],
+        ["Brier score", num(m.brier_score)],
+        ["Precisión", num(m.precision)],
+        ["Recall", num(m.recall)],
+        ["Costo total", num(m.costo)],
+        ["Matriz de confusión", "TN " + num(mc.tn) + " · FP " + num(mc.fp) + " · FN " + num(mc.fn) + " · TP " + num(mc.tp)],
+        ["Entrenamiento", (f.entrenamiento ? f.entrenamiento.periodo + " (n=" + f.entrenamiento.n + ")" : "—")],
+        ["Prueba", (f.prueba ? f.prueba.periodo + " (n=" + f.prueba.n + ")" : "—")],
+        ["Fecha del modelo", num(f.fecha)],
+        ["Límites", num(f.limites)],
+      ];
+      for (const [k, v] of filas) {
+        const tr = document.createElement("tr");
+        const th = document.createElement("th"); th.textContent = k;
+        const td = document.createElement("td"); td.textContent = v;
+        tr.append(th, td); t.appendChild(tr);
+      }
+      cont.appendChild(t);
+    } catch (e) {
+      cont.innerHTML = "";
+      const p = document.createElement("p");
+      p.className = "estado error";
+      p.textContent = "No se pudo cargar la ficha técnica: " + (e.message || e);
+      cont.appendChild(p);
+    }
+  }
+
+  $("btnPop").addEventListener("click", () => predecir("/predict/popularidad", "pop"));
+  $("btnHit").addEventListener("click", () => predecir("/predict/hit", "hit"));
+  form.addEventListener("submit", (ev) => { ev.preventDefault(); });
+  $("tab-res").addEventListener("click", () => mostrar(ultimo));
+  $("tab-ficha").addEventListener("click", () => {
+    $("tab-res").setAttribute("aria-selected", "false");
+    $("tab-ficha").setAttribute("aria-selected", "true");
+    $("panel-res").hidden = true;
+    $("panel-ficha").hidden = false;
+    cargarFicha();
   });
 
   cargarInfo();

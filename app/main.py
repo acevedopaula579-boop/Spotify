@@ -5,7 +5,9 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
+import sklearn
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -31,6 +33,22 @@ artefacto = joblib.load(BASE / config["archivo_modelo"])
 modelo = artefacto["pipeline"]
 COLUMNAS: list[str] = list(artefacto["columnas_entrada"])
 FICHA: dict = artefacto["ficha"]
+
+UMBRAL_POPULARIDAD = 70.0  # indice a partir del cual la popularidad se considera buena
+
+# Clasificador del sprint 2: misma entrada, otra salida (probabilidad de hit).
+artefacto_clf = joblib.load(BASE / "clasificador_hit.pkl")
+if artefacto_clf["ficha"]["tarea"] != "clasificacion":
+    raise RuntimeError(f"clasificador_hit.pkl debe ser de clasificacion, no {artefacto_clf['ficha']['tarea']}")
+_version_pkl = artefacto_clf["ficha"]["versiones"]["scikit_learn"]
+if _version_pkl != sklearn.__version__:
+    raise RuntimeError(
+        f"clasificador_hit.pkl se creo con scikit-learn {_version_pkl} y el entorno tiene {sklearn.__version__}"
+    )
+clasificador = artefacto_clf["pipeline"]
+COLUMNAS_CLASIFICADOR: list[str] = list(artefacto_clf["columnas_entrada"])
+FICHA_CLASIFICADOR: dict = artefacto_clf["ficha"]
+UMBRAL_HIT = float(FICHA_CLASIFICADOR["decision"]["umbral"])
 
 MARGEN_RANGO = 0.10  # 10% del rango observado, para no rechazar valores reales
 
@@ -173,6 +191,17 @@ if _faltan or _sobran:
         f"El esquema no coincide con columnas_entrada del .pkl: "
         f"faltan={sorted(_faltan)} sobran={sorted(_sobran)}"
     )
+if set(COLUMNAS_CLASIFICADOR) != set(Entrada.model_fields):
+    raise RuntimeError("El esquema no coincide con columnas_entrada del clasificador")
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # endpoints
@@ -201,6 +230,7 @@ def info():
         "columnas": COLUMNAS,
         "generos": GENEROS,
         "tipo": type(modelo).__name__,
+        "umbral_popularidad": UMBRAL_POPULARIDAD,
     }
 
 
@@ -209,7 +239,61 @@ def predecir(entrada: Entrada):
     fila = pd.DataFrame([entrada.model_dump()], columns=COLUMNAS)
     valor = float(modelo.predict(fila)[0])
     guardar_prediccion(entrada.model_dump(), valor)
-    return {"indice_popularidad": round(valor, 2), "version_modelo": config["version"]}
+    buena = valor >= UMBRAL_POPULARIDAD
+    return {
+        "indice_popularidad": round(valor, 2),
+        "version_modelo": config["version"],
+        "nivel": "buena" if buena else "insuficiente",
+        "lectura": "Buena popularidad" if buena else "Popularidad insuficiente",
+        "umbral_popularidad": UMBRAL_POPULARIDAD,
+    }
+
+
+@app.post("/predict/hit")
+def predecir_hit(entrada: Entrada):
+    fila = pd.DataFrame([entrada.model_dump()], columns=COLUMNAS_CLASIFICADOR)
+    prob = float(clasificador.predict_proba(fila)[0, 1])
+    invertir = prob > UMBRAL_HIT
+    return {
+        "probabilidad_hit": round(prob, 4),
+        "probabilidad_pct": round(prob * 100, 1),
+        "umbral": UMBRAL_HIT,
+        "umbral_pct": round(UMBRAL_HIT * 100, 0),
+        "invertir": invertir,
+        "mensaje": (
+            "Se recomienda invertir: la probabilidad de hit supera el umbral del 27 %"
+            if invertir
+            else "No se recomienda invertir: no alcanza el umbral del 27 %"
+        ),
+        "version_modelo": config["version"],
+        "modelo": FICHA_CLASIFICADOR["nombre"],
+    }
+
+
+@app.get("/modelo/clasificador")
+def info_clasificador():
+    d = FICHA_CLASIFICADOR["desempeno"]
+    return {
+        "nombre": FICHA_CLASIFICADOR["nombre"],
+        "tarea": FICHA_CLASIFICADOR["tarea"],
+        "objetivo": FICHA_CLASIFICADOR["objetivo"],
+        "version": config["version"],
+        "fecha": FICHA_CLASIFICADOR.get("fecha"),
+        "umbral": UMBRAL_HIT,
+        "decision": FICHA_CLASIFICADOR["decision"],
+        "entrenamiento": FICHA_CLASIFICADOR["entrenamiento"],
+        "prueba": FICHA_CLASIFICADOR["prueba"],
+        "linea_base": FICHA_CLASIFICADOR["linea_base"],
+        "metricas": {
+            "roc_auc": d.get("roc_auc"),
+            "brier_score": d.get("brier_score"),
+            "precision": d.get("precision"),
+            "recall": d.get("recall"),
+            "costo": d.get("costo"),
+            "matriz_confusion": d.get("matriz_confusion"),
+        },
+        "limites": FICHA_CLASIFICADOR.get("limites"),
+    }
 
 
 @app.get("/metricas/regresion")
