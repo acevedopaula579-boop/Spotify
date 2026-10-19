@@ -1,10 +1,10 @@
 {
-  "MAE": 5.67,
-  "RMSE": 7.11,
-  "R2": 0.722,
-  "sesgo": 0.27,
+  "MAE": 5.71,
+  "RMSE": 7.12,
+  "R2": 0.72,
+  "sesgo": 0.32,
   "linea_base_mae": 10.44,
   "modelo": "ridge + interacciones acusticas y de genero",
-  "fecha_entrenamiento": "2026-10-06",
-  "nota": "Metricas de la ficha del modelo regresion/models/modelo.pkl (particion temporal: entrenamiento 1995-2019, prueba 2020-2025)."
+  "fecha_entrenamiento": "2026-10-18",
+  "nota": "Metricas de la ficha del modelo app/modelos/regresion_popularidad.pkl (particion temporal: entrenamiento 1995-2019, prueba 2020-2025). Reentrenado con regresion/src/variables.py (sprint 2: dance_energy en lugar de pop_bailabilidad/urbano_bailabilidad)."
 }
