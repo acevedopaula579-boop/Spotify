@@ -1,6 +1,10 @@
 {
-  "MAE": null,
-  "RMSE": null,
-  "R2": null,
-  "nota": "Placeholder. Reemplazar con las metricas del modelo real."
+  "MAE": 5.71,
+  "RMSE": 7.12,
+  "R2": 0.72,
+  "sesgo": 0.32,
+  "linea_base_mae": 10.44,
+  "modelo": "ridge + interacciones acusticas y de genero",
+  "fecha_entrenamiento": "2026-10-18",
+  "nota": "Metricas de la ficha del modelo app/modelos/regresion_popularidad.pkl (particion temporal: entrenamiento 1995-2019, prueba 2020-2025). Reentrenado con regresion/src/variables.py (sprint 2: dance_energy en lugar de pop_bailabilidad/urbano_bailabilidad)."
 }
