@@ -53,11 +53,10 @@ FILA_EJEMPLO = {
 
 COLUMNAS_DERIVADAS = [
     "duracion_c2",
+    "dance_energy",
     "valencia_acustica",
     "colab_indie",
     "pop_energia",
-    "pop_bailabilidad",
-    "urbano_bailabilidad",
 ]
 
 
@@ -65,11 +64,10 @@ def derivadas(X: pd.DataFrame) -> pd.DataFrame:
     """Agrega las variables derivadas. Se calculan fila a fila, sin aprender de otros registros."""
     X = X.copy()
     X["duracion_c2"] = (X["duracion_min"] - 3.5) ** 2
+    X["dance_energy"] = X["bailabilidad"] * X["energia"]
     X["valencia_acustica"] = X["valencia"] * X["acustica"]
     X["colab_indie"] = (X["colaboracion"] * (X["genero"] == "indie")).astype(float)
     X["pop_energia"] = ((X["genero"] == "pop").astype(float) * X["energia"])
-    X["pop_bailabilidad"] = ((X["genero"] == "pop").astype(float) * X["bailabilidad"])
-    X["urbano_bailabilidad"] = ((X["genero"] == "urbano").astype(float) * X["bailabilidad"])
     return X
 
 
