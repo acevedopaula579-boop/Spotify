@@ -1,0 +1,9 @@
+corrida,validacion,MAE,RMSE,R2,sesgo,nota
+línea base: media por género,"entrena 1995-2019, prueba 2020-2025",10.443,13.155,0.047,2.924,referencia
+"lineal, todas las columnas","entrena 1995-2019, prueba 2020-2025",1.406,1.968,0.979,0.117,descartada: usa columnas con fuga
+"lineal, columnas válidas","entrena 1995-2019, prueba 2020-2025",5.872,7.363,0.701,0.306,
+"gradient boosting, columnas válidas","entrena 1995-2019, prueba 2020-2025",6.59,8.117,0.637,2.004,
+"random forest, columnas válidas","entrena 1995-2019, prueba 2020-2025",7.015,8.772,0.576,1.957,
+lineal + duración²,"entrena 1995-2019, prueba 2020-2025",5.754,7.151,0.718,0.264,
+lineal + variables derivadas del equipo,"entrena 1995-2019, prueba 2020-2025",5.666,7.101,0.722,0.271,
+ridge + variables derivadas del equipo,"entrena 1995-2019, prueba 2020-2025",5.671,7.106,0.722,0.268,

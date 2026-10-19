@@ -1,0 +1,12 @@
+# Render: New + > Blueprint > seleccionar su repositorio.
+services:
+  - type: web
+    name: demo-reg-clas-canciones
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /salud
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
